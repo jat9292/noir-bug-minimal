@@ -17,6 +17,7 @@ fn main( packed_public_key: pub [Field;32]) {
 #[test]
 fn test_bug() {
     let packed_public_key = [220,159,159,219,116,109,15,7,176,4,204,67,22,227,73,90,88,87,11,144,102,20,153,248,166,166,105,111,244,21,107,170];
+    let mut packed_public_key_Field: [Field;32]  = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
     for i in 0..32 {
         packed_public_key_Field[i] = packed_public_key[i] as Field;
     }

@@ -1,5 +1,4 @@
 use dep::std::ec::tecurve::affine::Point as Gaffine;
-use dep::biguint::BigUint56;
 use dep::std::ec;
 
 global bjj_a = 168700;
@@ -34,7 +33,7 @@ fn from_rpr_le(public_key: [u8;32]) -> Field {
   y
 }
 
-fn unpack_point(public_key: [u8; 32]) -> Gaffine 
+pub fn unpack_point(public_key: [u8; 32]) -> Gaffine 
 {
   let mut y_array = public_key;
   let mut point: Gaffine = Gaffine::new(0,0);
@@ -44,16 +43,13 @@ fn unpack_point(public_key: [u8; 32]) -> Gaffine
     y_array[31] &= 0x7f;
   }
 
-  /// Checking the validity of the public key to ensure unicity
-  let mut y_slice: [u8] = [];
-  for i in 0..32 {
-    y_slice=y_slice.push_back(y_array[i]);
-  }
-  let yBigUint = BigUint56::from_bytes(y_slice);
-  let pBigUint = (BigUint56::from_bytes((-1).to_le_bytes(32)).add(BigUint56::from_bytes((1).to_le_bytes(32)))); // p in BigUint format (so it is non-null)
-  assert(yBigUint.lt(pBigUint), "The packed public key is invalid"); // Important check to get unicity of the packed public key, otherwise a malicious user could generate several packed keys for the same unpacked public key by adding a multiple of p to y
-
   point.y = from_rpr_le(y_array);
+  let recovered_y_slice = point.y.to_le_bytes(32); 
+  let mut recovered_y_array: [u8;32] = [0;32];
+  for i in 0..32 {
+     recovered_y_array[i]=recovered_y_slice[i];
+  }
+  assert(recovered_y_array==y_array,"The packed public key is invalid"); // Important check to get unicity of the packed public key, otherwise a malicious user could generate several packed keys for the same unpacked public key by adding a multiple of p to y
 
   let mut y2 = point.y * point.y;
   let xa = 1-y2;
@@ -62,12 +58,29 @@ fn unpack_point(public_key: [u8; 32]) -> Gaffine
   point.x = ec::sqrt(x2);
 
   let pm1d2 = -1 / 2;
-  let sign2 = (BigUint56::from_bytes(point.x.to_le_bytes(32))
-      .gt(BigUint56::from_bytes(pm1d2.to_le_bytes(32))));
+  let sign2 = lt_bytes32(pm1d2, point.x);
 
   if(sign!=sign2) {  // discrepancy compared to circomlibjs here probably due to the Montgomery modular form conversion in circomlibjs/ffwasm
      point.x = -point.x;
   } 
+  point // the unpacked public key
+}
 
-  point
+fn lt_bytes32(x: Field, y: Field) -> bool {
+    let x_bytes = x.to_le_bytes(32);
+    let y_bytes = y.to_le_bytes(32);
+    let mut x_is_lt = false;
+    let mut done = false;
+    for i in 0..32 {
+        if (!done) {
+            let x_byte = x_bytes[31 - i] as u8;
+            let y_byte = y_bytes[31 - i] as u8;
+            let bytes_match = x_byte == y_byte;
+            if !bytes_match {
+                x_is_lt = x_byte < y_byte;
+                done = true;
+            }
+        }
+    }
+    x_is_lt
 }

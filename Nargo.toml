@@ -2,7 +2,3 @@
 name = "bug"
 type = "bin"
 authors = [""]
-compiler_version = "0.17.0"
-
-[dependencies]
-biguint = { path = "./biguint" }
